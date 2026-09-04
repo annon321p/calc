@@ -1,1 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTrack • Personal Expense & EMI Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#EEF2FF',
+                            100: '#E0E7FF',
+                            500: '#6366F1',
+                            600: '#4F46E5',
+                            700: '#4338CA',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/custom.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
+    <!-- TOP NAVIGATION HEADER -->
+    <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Brand Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                    <i data-lucide="shield-dollar" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
+                        FinTrack <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Expense & EMI Hub</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-400">Credit Cards • Car Loan EMI • Bank Accounts</p>
+                </div>
+            </div>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex items-center flex-wrap gap-2">
+                <button onclick="openModal('modalAddExpense')" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/20 flex items-center gap-1.5 transition active:scale-95">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Log Expense
+                </button>
+
+                <button onclick="openAddLoanModal('car_loan')" class="px-3.5 py-2 bg-red-600/90 hover:bg-red-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-red-600/20 flex items-center gap-1.5 transition active:scale-95">
+                    <i data-lucide="car" class="w-4 h-4"></i> Add Loan / EMI
+                </button>
+
+                <button onclick="openModal('modalAddAccount')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
+                    <i data-lucide="wallet" class="w-4 h-4"></i> Add Account/Card
+                </button>
+
+                <button onclick="seedDemoData()" class="p-2 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-300 text-xs font-medium rounded-xl border border-slate-700 transition" title="Reset & Load Realistic Demo Data">
+                    <i data-lucide="database-zap" class="w-4 h-4"></i>
+                </button>
+
+                <a href="/api/export/csv" class="p-2 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-medium rounded-xl border border-slate-700 transition" title="Export Transactions as CSV">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                </a>
+
+                <!-- User Profile & Sign Out -->
+                <div class="flex items-center gap-2 border-l border-slate-700/80 pl-2 ml-1" id="headerUserSection">
+                    <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700/80 text-xs">
+                        <div class="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-bold text-white uppercase" id="userAvatar">
+                            U
+                        </div>
+                        <span class="font-medium text-slate-200 hidden sm:inline" id="userDisplayName">User</span>
+                    </div>
+                    <button onclick="handleLogout()" class="p-2 bg-slate-800/80 hover:bg-rose-900/40 text-slate-400 hover:text-rose-300 rounded-xl border border-slate-700 transition" title="Sign Out">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <button id="headerSignInBtn" onclick="showAuthOverlay()" class="hidden px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow transition">
+                    Sign In
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- SUB-NAV / TABS BAR -->
+    <div class="bg-slate-900/40 border-b border-slate-800/60 px-4 lg:px-8 py-2.5">
+        <div class="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white shadow-md flex items-center gap-2 transition" data-tab="dashboard">
+                <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Dashboard
+            </button>
+            <button class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 flex items-center gap-2 transition" data-tab="loans">
+                <i data-lucide="car" class="w-3.5 h-3.5"></i> Loans & EMIs
+            </button>
+            <button class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 flex items-center gap-2 transition" data-tab="accounts">
+                <i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Bank & Credit Cards
+            </button>
+            <button class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 flex items-center gap-2 transition" data-tab="transactions">
+                <i data-lucide="receipt" class="w-3.5 h-3.5"></i> Expenses Ledger
+            </button>
+            <button class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 flex items-center gap-2 transition" data-tab="calculator">
+                <i data-lucide="calculator" class="w-3.5 h-3.5"></i> EMI Planner
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-6">
+
+        <!-- ========================================================= -->
+        <!-- TAB 1: DASHBOARD VIEW -->
+        <!-- ========================================================= -->
+        <section id="tabView-dashboard" class="tab-view space-y-6">
+
+            <!-- 4 Top KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <!-- Card 1: Bank Balance -->
+                <div class="p-5 rounded-2xl glass-card border border-slate-700/50 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-400">Total Bank Balance</span>
+                        <div class="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center">
+                            <i data-lucide="building-2" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="dashTotalBank" class="text-2xl font-black text-white">₹0</div>
+                        <div class="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                            <span class="text-sky-400 font-medium">Liquid Funds</span> across bank accounts
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Credit Card Outstanding -->
+                <div class="p-5 rounded-2xl glass-card border border-slate-700/50 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-400">Credit Card Due</span>
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+                            <i data-lucide="credit-card" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="dashTotalCC" class="text-2xl font-black text-indigo-400">₹0</div>
+                        <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                            <div id="dashCCLimitBar" class="h-full bg-indigo-500 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div id="dashCCLimitText" class="text-[10px] text-slate-400 mt-1">0% limit used</div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Monthly Net Cashflow -->
+                <div class="p-5 rounded-2xl glass-card border border-slate-700/50 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-400">This Month's Net</span>
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                            <i data-lucide="trending-up" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="dashNetCashflow" class="text-2xl font-black text-emerald-400">₹0</div>
+                        <div class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                            <span>In: <strong id="dashMonthIncome" class="text-emerald-400 font-medium">₹0</strong></span>
+                            <span>Out: <strong id="dashMonthExpense" class="text-rose-400 font-medium">₹0</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Total EMI Outflow -->
+                <div class="p-5 rounded-2xl glass-card border border-slate-700/50 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-medium text-slate-400">Monthly EMI Outflow</span>
+                        <div class="w-8 h-8 rounded-lg bg-red-500/15 text-red-400 flex items-center justify-center">
+                            <i data-lucide="percent" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div id="dashMonthEmi" class="text-2xl font-black text-red-400">₹0</div>
+                        <div class="text-[11px] text-slate-400 mt-1">
+                            Car Loan & Credit Card EMIs
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- PERSONAL CAR LOAN HERO SPOTLIGHT -->
+            <div id="carLoanSpotlight">
+                <!-- Dynamically Populated by renderCarLoanWidget -->
+            </div>
+
+            <!-- Two Columns: Upcoming Dues & Analytics -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Column (5 Cols): Upcoming Due Alerts -->
+                <div class="lg:col-span-5 space-y-4">
+                    
+                    <!-- Upcoming Loan EMIs -->
+                    <div class="p-5 rounded-2xl glass-card border border-slate-700/50 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="bell-ring" class="w-4 h-4 text-red-400"></i> Upcoming EMI Due Dates
+                            </h3>
+                            <button onclick="switchTab('loans')" class="text-[11px] text-indigo-400 hover:text-indigo-300">View All</button>
+                        </div>
+                        <div id="upcomingEmiList" class="space-y-2">
+                            <!-- Injected by renderUpcomingAlerts -->
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Credit Card Bill Due Dates -->
+                    <div class="p-5 rounded-2xl glass-card border border-slate-700/50 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="calendar-clock" class="w-4 h-4 text-indigo-400"></i> Credit Card Bill Dues
+                            </h3>
+                            <button onclick="switchTab('accounts')" class="text-[11px] text-indigo-400 hover:text-indigo-300">View Cards</button>
+                        </div>
+                        <div id="upcomingCcDuesList" class="space-y-2">
+                            <!-- Injected by renderUpcomingAlerts -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column (7 Cols): Monthly Visual Charts -->
+                <div class="lg:col-span-7 space-y-4">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
+                        <!-- Donut Chart: Category Spends -->
+                        <div class="p-5 rounded-2xl glass-card border border-slate-700/50 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i> Spends by Category
+                                </h4>
+                            </div>
+                            <div class="relative h-56 w-full flex items-center justify-center">
+                                <canvas id="categoryDonutChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Bar Chart: Bank vs CC Spends -->
+                        <div class="p-5 rounded-2xl glass-card border border-slate-700/50 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-sky-400"></i> Outflow by Source
+                                </h4>
+                            </div>
+                            <div class="relative h-56 w-full flex items-center justify-center">
+                                <canvas id="sourceBarChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 6-Month Trend Line Chart -->
+                    <div class="p-5 rounded-2xl glass-card border border-slate-700/50">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i> 6-Month Income vs Expense Trend
+                            </h4>
+                        </div>
+                        <div class="relative h-56 w-full">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Recent Transactions Mini Table -->
+            <div class="p-5 rounded-2xl glass-card border border-slate-700/50 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i> Recent Expenses & Debits
+                    </h3>
+                    <button onclick="switchTab('transactions')" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium">
+                        View Full Ledger →
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="py-2 px-4">Date</th>
+                                <th class="py-2 px-4">Description</th>
+                                <th class="py-2 px-4">Category</th>
+                                <th class="py-2 px-4">Payment Source</th>
+                                <th class="py-2 px-4 text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashRecentTxBody">
+                            <!-- Injected by renderDashboardRecentTransactions -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- TAB 2: LOANS & EMIS HUB -->
+        <!-- ========================================================= -->
+        <section id="tabView-loans" class="tab-view hidden space-y-6">
+            
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white tracking-tight">Loans & EMI Management</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Track your personal car loan, credit card EMIs, and amortization schedules</p>
+                </div>
+                <button onclick="openAddLoanModal()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl shadow-lg flex items-center gap-1.5 transition">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Add New Loan / EMI
+                </button>
+            </div>
+
+            <!-- Loans Grid -->
+            <div id="loansCardGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Injected by renderLoansView -->
+            </div>
+
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- TAB 3: BANK & CREDIT CARDS -->
+        <!-- ========================================================= -->
+        <section id="tabView-accounts" class="tab-view hidden space-y-6">
+            
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white tracking-tight">Bank Accounts & Credit Cards</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Monitor liquid funds, credit limits, card utilization, and settle bills</p>
+                </div>
+                <button onclick="openModal('modalAddAccount')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow flex items-center gap-1.5 transition">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Add Account or Card
+                </button>
+            </div>
+
+            <!-- Section 1: Credit Cards -->
+            <div class="space-y-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-indigo-400"></div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Credit Cards</h3>
+                </div>
+                <div id="accountsCreditCardGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Injected by renderAccountsView -->
+                </div>
+            </div>
+
+            <!-- Section 2: Bank Accounts & Cash -->
+            <div class="space-y-3 pt-4 border-t border-slate-800">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-sky-400"></div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Bank Accounts & Cash Wallets</h3>
+                </div>
+                <div id="accountsBankGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Injected by renderAccountsView -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- TAB 4: TRANSACTIONS & EXPENSES LEDGER -->
+        <!-- ========================================================= -->
+        <section id="tabView-transactions" class="tab-view hidden space-y-6">
+            
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white tracking-tight">Expense Ledger</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Detailed records of all bank debits, credit card spends, and EMI payments</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/api/export/csv" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i> Export CSV
+                    </a>
+                    <button onclick="openModal('modalAddExpense')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow flex items-center gap-1.5 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Log New Expense
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="p-4 rounded-2xl glass-card border border-slate-700/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                <div>
+                    <label class="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Month</label>
+                    <input type="month" id="txFilterMonth" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Account / Card</label>
+                    <select id="txFilterAccount" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Accounts & Cards</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Category</label>
+                    <select id="txFilterCategory" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Type</label>
+                    <select id="txFilterType" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="">All Types</option>
+                        <option value="expense">Expenses Only</option>
+                        <option value="emi_payment">EMI Payments Only</option>
+                        <option value="income">Income Only</option>
+                        <option value="cc_bill_payment">Credit Card Bill Payments</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Search Keyword</label>
+                    <input type="text" id="txFilterSearch" placeholder="Search fuel, grocery..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+            </div>
+
+            <!-- Ledger Table -->
+            <div class="p-5 rounded-2xl glass-card border border-slate-700/60 space-y-3">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span id="txCountBadge">Loading transactions...</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="py-2.5 px-4">Date</th>
+                                <th class="py-2.5 px-4">Description</th>
+                                <th class="py-2.5 px-4">Category</th>
+                                <th class="py-2.5 px-4">Source Account</th>
+                                <th class="py-2.5 px-4 text-right">Amount</th>
+                                <th class="py-2.5 px-4 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="txTableBody">
+                            <!-- Injected by renderTransactionsTable -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- TAB 5: EMI & LOAN CALCULATOR PLANNER -->
+        <!-- ========================================================= -->
+        <section id="tabView-calculator" class="tab-view hidden space-y-6">
+            
+            <div>
+                <h2 class="text-xl font-bold text-white tracking-tight">Loan EMI & Amortization Calculator</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Simulate vehicle loans, credit card EMIs, or home loans with interest breakdown</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Inputs Column (5 cols) -->
+                <div class="lg:col-span-5 p-6 rounded-2xl glass-card border border-slate-700/60 space-y-5">
+                    
+                    <!-- Principal -->
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1.5">
+                            <span>Loan Principal Amount (₹)</span>
+                        </div>
+                        <input type="number" id="calcPrincipal" value="1000000" step="10000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none focus:border-indigo-500">
+                        <div class="flex flex-wrap gap-1.5 mt-2">
+                            <button class="calc-chip-principal px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" data-val="500000">₹5 Lakh</button>
+                            <button class="calc-chip-principal px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" data-val="1000000">₹10 Lakh</button>
+                            <button class="calc-chip-principal px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" data-val="1500000">₹15 Lakh</button>
+                            <button class="calc-chip-principal px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" data-val="2000000">₹20 Lakh</button>
+                        </div>
+                    </div>
+
+                    <!-- Interest Rate -->
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1.5">
+                            <span>Annual Interest Rate (%)</span>
+                        </div>
+                        <input type="number" id="calcRate" value="8.75" step="0.05" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none focus:border-indigo-500">
+                        <div class="flex gap-1.5 mt-2">
+                            <button onclick="document.getElementById('calcRate').value='8.5'; updateCalculatorUI();" class="px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">8.5% (SBI Car)</button>
+                            <button onclick="document.getElementById('calcRate').value='8.75'; updateCalculatorUI();" class="px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">8.75% (HDFC)</button>
+                            <button onclick="document.getElementById('calcRate').value='14'; updateCalculatorUI();" class="px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">14% (CC EMI)</button>
+                        </div>
+                    </div>
+
+                    <!-- Tenure -->
+                    <div>
+                        <div class="flex justify-between text-xs font-semibold text-slate-300 mb-1.5">
+                            <span>Tenure in Months</span>
+                        </div>
+                        <input type="number" id="calcTenure" value="60" step="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none focus:border-indigo-500">
+                        <div class="flex gap-1.5 mt-2">
+                            <button class="calc-chip-tenure px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700" data-val="6">6 Months</button>
+                            <button class="calc-chip-tenure px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700" data-val="36">3 Years (36M)</button>
+                            <button class="calc-chip-tenure px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700" data-val="60">5 Years (60M)</button>
+                            <button class="calc-chip-tenure px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700" data-val="84">7 Years (84M)</button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Results Column (7 cols) -->
+                <div class="lg:col-span-7 space-y-4">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-center">
+                            <span class="text-[10px] uppercase font-bold text-red-300 tracking-wider">Monthly EMI</span>
+                            <div id="calcEmiResult" class="text-2xl font-black text-white mt-1">₹0</div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-center">
+                            <span class="text-[10px] uppercase font-bold text-rose-300 tracking-wider">Total Interest</span>
+                            <div id="calcInterestResult" class="text-xl font-bold text-rose-400 mt-1">₹0</div>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-center">
+                            <span class="text-[10px] uppercase font-bold text-indigo-300 tracking-wider">Total Payable</span>
+                            <div id="calcPayableResult" class="text-xl font-bold text-indigo-300 mt-1">₹0</div>
+                        </div>
+                    </div>
+
+                    <!-- Donut Chart & Schedule Preview -->
+                    <div class="p-5 rounded-2xl glass-card border border-slate-700/60">
+                        <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider mb-2">Loan Breakup (Principal vs Interest)</h4>
+                        <div class="relative h-44 w-full flex items-center justify-center">
+                            <canvas id="calcPieChart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Amortization Schedule Table Preview -->
+            <div class="p-5 rounded-2xl glass-card border border-slate-700/60 space-y-3">
+                <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Amortization Schedule Breakdown</h3>
+                <div class="max-h-80 overflow-y-auto">
+                    <table class="w-full text-left">
+                        <thead class="sticky top-0 bg-slate-900">
+                            <tr class="border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="py-2.5 px-4">Installment</th>
+                                <th class="py-2.5 px-4 text-right">EMI (₹)</th>
+                                <th class="py-2.5 px-4 text-right">Principal Component</th>
+                                <th class="py-2.5 px-4 text-right">Interest Component</th>
+                                <th class="py-2.5 px-4 text-right">Remaining Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calcScheduleBody">
+                            <!-- Injected by updateCalculatorUI -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ========================================================= -->
+    <!-- MODALS -->
+    <!-- ========================================================= -->
+
+    <!-- MODAL 1: ADD TRANSACTION (EXPENSE / INCOME) -->
+    <div id="modalAddExpense" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-fade-in">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Log Expense / Income</h3>
+                </div>
+                <button onclick="closeModal('modalAddExpense')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="formAddTransaction" class="space-y-3.5 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Transaction Type</label>
+                        <select id="txType" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            <option value="expense">Expense (Debit)</option>
+                            <option value="income">Income (Credit)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Amount (₹) *</label>
+                        <input type="number" id="txAmount" required step="0.01" placeholder="0.00" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Payment Source (Bank or Credit Card) *</label>
+                    <select id="txAccount" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                        <!-- Populated dynamically with optgroups for Bank & Credit Card -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Category</label>
+                        <select id="txCategory" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Date</label>
+                        <input type="date" id="txDate" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Description / Merchant *</label>
+                    <input type="text" id="txDescription" required placeholder="e.g. Shell Petrol Pump, Amazon Fresh, Rent" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Tags (comma separated)</label>
+                        <input type="text" id="txTags" placeholder="Car, Fuel, Dining" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Notes (Optional)</label>
+                        <input type="text" id="txNotes" placeholder="Additional details" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalAddExpense')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg transition">
+                        Save Transaction
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD LOAN / EMI -->
+    <div id="modalAddLoan" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-red-500/15 text-red-400 flex items-center justify-center">
+                        <i data-lucide="car" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Add Loan / EMI</h3>
+                </div>
+                <button onclick="closeModal('modalAddLoan')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="formAddLoan" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Loan / EMI Type</label>
+                    <select id="loanType" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="car_loan">Personal Car Loan</option>
+                        <option value="credit_card_emi">Credit Card EMI</option>
+                        <option value="personal_loan">Personal Loan</option>
+                        <option value="home_loan">Home Loan</option>
+                        <option value="other">Other EMI</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Loan Name *</label>
+                    <input type="text" id="loanName" required placeholder="e.g. Car Loan - Hyundai Creta or MacBook CC EMI" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div id="vehicleDetailsGroup">
+                    <label class="block text-slate-400 font-semibold mb-1">Vehicle Details (Make/Model/Reg No)</label>
+                    <input type="text" id="loanVehicleDetails" placeholder="e.g. Hyundai Creta SX(O) - MH 12 AB 5678" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Lender Bank / Financer</label>
+                    <input type="text" id="loanLender" placeholder="e.g. HDFC Bank, SBI, ICICI" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Principal (₹) *</label>
+                        <input type="number" id="loanPrincipal" required step="1" placeholder="1000000" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Rate (%) *</label>
+                        <input type="number" id="loanRate" required step="0.01" placeholder="8.75" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Tenure (Months) *</label>
+                        <input type="number" id="loanTenure" required step="1" placeholder="60" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Start Date</label>
+                        <input type="date" id="loanStartDate" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Monthly EMI Day</label>
+                        <input type="number" id="loanEmiDay" min="1" max="31" value="5" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Linked Bank Account (Auto-Debit source)</label>
+                    <select id="loanLinkedAccount" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                        <!-- Populated dynamically with bank accounts -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Notes / Loan Account Number</label>
+                    <input type="text" id="loanNotes" placeholder="Loan A/c # 5010048291..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalAddLoan')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl shadow-lg transition">
+                        Create Loan & Schedule
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADD ACCOUNT / CREDIT CARD -->
+    <div id="modalAddAccount" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fade-in">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-white">Add Account or Credit Card</h3>
+                <button onclick="closeModal('modalAddAccount')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="formAddAccount" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Account Type</label>
+                    <select id="newAccType" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="bank">Bank Savings / Salary Account</option>
+                        <option value="credit_card">Credit Card</option>
+                        <option value="cash">Cash Wallet</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Account / Card Name *</label>
+                    <input type="text" id="newAccName" required placeholder="e.g. HDFC Regalia CC or SBI Salary A/c" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Last 4 Digits</label>
+                        <input type="text" id="newAccLast4" maxlength="4" placeholder="7712" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label id="newAccBalanceLabel" class="block text-slate-400 font-semibold mb-1">Opening Balance (₹)</label>
+                        <input type="number" id="newAccBalance" step="0.01" value="0" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <!-- Credit card specific fields -->
+                <div id="newAccCreditCardFields" class="hidden space-y-3 pt-2 border-t border-slate-800">
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Total Credit Limit (₹)</label>
+                        <input type="number" id="newAccLimit" step="1000" placeholder="300000" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-semibold mb-1">Payment Due Day of Month</label>
+                        <input type="number" id="newAccDueDay" min="1" max="31" value="20" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalAddAccount')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg transition">
+                        Add Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: PAY CREDIT CARD BILL -->
+    <div id="modalPayCard" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fade-in">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center">
+                        <i data-lucide="receipt" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Pay Credit Card Bill</h3>
+                        <p id="payCardName" class="text-xs text-indigo-300"></p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalPayCard')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="bg-indigo-950/40 border border-indigo-500/20 rounded-xl p-3 flex justify-between items-center text-xs">
+                <span class="text-slate-300">Total Outstanding Due:</span>
+                <span id="payCardOutstanding" class="text-sm font-bold text-white">₹0</span>
+            </div>
+
+            <form id="formPayCard" class="space-y-3.5 text-xs">
+                <input type="hidden" id="payCardId">
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Pay From Bank Account *</label>
+                    <select id="payCardBankSelect" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                        <!-- Injected with bank accounts -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Payment Amount (₹) *</label>
+                    <input type="number" id="payCardAmount" required step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Payment Date</label>
+                    <input type="date" id="payCardDate" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Remarks / Reference</label>
+                    <input type="text" id="payCardNotes" placeholder="Bill cleared in full via NetBanking" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalPayCard')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg transition">
+                        Confirm Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: PAY LOAN EMI CONFIRMATION -->
+    <div id="modalPayEmi" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fade-in">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-red-500/15 text-red-400 flex items-center justify-center">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">Pay EMI Installment</h3>
+                        <p id="payEmiInstNo" class="text-xs text-red-300"></p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalPayEmi')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-3 flex justify-between items-center text-xs">
+                <span class="text-slate-300">EMI Amount to Debit:</span>
+                <span id="payEmiAmount" class="text-base font-extrabold text-white">₹0</span>
+            </div>
+
+            <form id="formPayEmi" class="space-y-3.5 text-xs">
+                <input type="hidden" id="payEmiLoanId">
+                <input type="hidden" id="payEmiScheduleId">
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Debit From Bank Account *</label>
+                    <select id="payEmiBankSelect" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                        <!-- Injected with bank accounts -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Payment Date</label>
+                    <input type="date" id="payEmiDate" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalPayEmi')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl shadow-lg transition">
+                        Debit & Mark Paid
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 6: AMORTIZATION SCHEDULE TABLE VIEWER -->
+    <div id="modalAmortization" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-4 animate-fade-in max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 id="amortizationLoanTitle" class="text-base font-bold text-white">Amortization Schedule</h3>
+                    <p class="text-xs text-slate-400">Complete month-by-month principal and interest payoff timeline</p>
+                </div>
+                <button onclick="closeModal('modalAmortization')" class="text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto border border-slate-800 rounded-xl">
+                <table class="w-full text-left">
+                    <thead class="sticky top-0 bg-slate-900 shadow-sm">
+                        <tr class="border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                            <th class="py-2.5 px-4">Inst #</th>
+                            <th class="py-2.5 px-4">Due Date</th>
+                            <th class="py-2.5 px-4 text-right">EMI Amount</th>
+                            <th class="py-2.5 px-4 text-right">Principal</th>
+                            <th class="py-2.5 px-4 text-right">Interest</th>
+                            <th class="py-2.5 px-4 text-right">Balance</th>
+                            <th class="py-2.5 px-4 text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="amortizationTableBody">
+                        <!-- Injected by openAmortizationModal -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeModal('modalAmortization')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- AUTHENTICATION OVERLAY (SIGN IN / REGISTER) -->
+    <!-- ========================================================= -->
+    <div id="authOverlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-4">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-md w-full p-8 shadow-2xl space-y-6 animate-fade-in relative">
+            
+            <!-- Brand & Heading -->
+            <div class="text-center space-y-2">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 mx-auto flex items-center justify-center shadow-xl shadow-indigo-500/25">
+                    <i data-lucide="shield-dollar" class="w-8 h-8 text-white"></i>
+                </div>
+                <h2 class="text-xl font-black text-white tracking-tight">FinTrack Personal Vault</h2>
+                <p class="text-xs text-slate-400">Sign in or register to manage your personal expenses, car loans & credit cards privately.</p>
+            </div>
+
+            <!-- Auth Tabs (Sign In / Register) -->
+            <div class="grid grid-cols-2 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-semibold">
+                <button type="button" id="tabBtnSignIn" onclick="switchAuthMode('signin')" class="py-2 rounded-lg bg-indigo-600 text-white shadow-md transition">
+                    Sign In
+                </button>
+                <button type="button" id="tabBtnSignUp" onclick="switchAuthMode('signup')" class="py-2 rounded-lg text-slate-400 hover:text-slate-200 transition">
+                    Create Account
+                </button>
+            </div>
+
+            <!-- Auth Error Banner -->
+            <div id="authErrorBanner" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-medium flex items-center gap-2">
+                <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+                <span id="authErrorMsg">Invalid credentials</span>
+            </div>
+
+            <!-- 1. SIGN IN FORM -->
+            <form id="formSignIn" class="space-y-4 text-xs">
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">User ID / Username</label>
+                    <div class="relative">
+                        <input type="text" id="loginUsername" required placeholder="e.g. sourav or admin" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter password" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition active:scale-98">
+                    Sign In to Vault
+                </button>
+
+                <!-- Demo Account Helper -->
+                <div class="pt-2 text-center">
+                    <button type="button" onclick="fillDemoLogin()" class="text-[11px] text-slate-400 hover:text-indigo-300 underline underline-offset-2 transition">
+                        Quick Demo: Login with demo credentials (admin / admin123)
+                    </button>
+                </div>
+            </form>
+
+            <!-- 2. CREATE ACCOUNT FORM (HIDDEN INITIALLY) -->
+            <form id="formSignUp" class="hidden space-y-3.5 text-xs">
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Full Name</label>
+                    <input type="text" id="regFullName" required placeholder="e.g. Sourav" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">User ID / Username *</label>
+                    <input type="text" id="regUsername" required placeholder="Choose a username (min 3 chars)" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Password *</label>
+                    <input type="password" id="regPassword" required placeholder="Choose password (min 4 chars)" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-semibold mb-1">Email (Optional)</label>
+                    <input type="email" id="regEmail" placeholder="you@example.com" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <button type="submit" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition active:scale-98">
+                    Create Private Account
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="appToast" class="fixed bottom-6 right-6 z-50 hidden flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold border">
+        <span id="appToastMsg"></span>
+    </div>
+
+    <!-- APPLICATION SCRIPTS -->
+    <script src="/static/js/charts.js"></script>
+    <script src="/static/js/emi_calc.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
